@@ -7,3 +7,9 @@ def get_session(event, context):
         'statusCode': 200,
         'body': json.dumps('Got Session!')
     }
+
+def get_session_by_key(event, context):
+    return {
+        'statusCode': 200,
+        'body': json.dumps('Got Session by Key!')
+    }
