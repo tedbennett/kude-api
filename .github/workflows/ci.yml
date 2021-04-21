@@ -1,0 +1,37 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI
+      
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on:
+  #when there is a push to the master
+  push:
+    branches: [ master ]
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+    
+    - name: Make artifact directory
+      run: mkdir -p ./artifacts/${{ github.repository }}
+
+    - name: Create Zip File
+      uses: montudor/action-zip@v0.1.0
+      with:
+        args: zip -r ./artifacts/${{ github.repository }}/${{ github.sha }}.zip ./src
+
+    - name: Push Zip to S3
+      uses: jakejarvis/s3-sync-action@v0.3.1
+      env:
+        SOURCE_DIR: './artifacts'
+        AWS_REGION: 'eu-west-1'
+        AWS_S3_BUCKET: 'zipped-lambda-functions'
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
