@@ -7,7 +7,7 @@ name: CI
 on:
   #when there is a push to the master
   push:
-    branches: [ master ]
+    branches: [ main ]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -21,12 +21,15 @@ jobs:
     
     - name: Make artifact directory
       run: mkdir -p ./artifacts/${{ github.repository }}
-
+      
+    - uses: actions/checkout@v2
+    
     - name: Create Zip File
-      uses: montudor/action-zip@v0.1.0
+      uses: papeloto/action-zip@v1
       with:
-        args: zip -r ./artifacts/${{ github.repository }}/${{ github.sha }}.zip ./src
-
+          files: src/ 
+          dest: ./artifacts/${{ github.repository }}/${{ github.sha }}.zip
+          
     - name: Push Zip to S3
       uses: jakejarvis/s3-sync-action@v0.3.1
       env:
