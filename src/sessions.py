@@ -31,3 +31,27 @@ def delete_session(event, context):
         'statusCode': 200,
         'body': json.dumps('Delete session!')
     }
+
+def add_member_to_session(event, context):
+    return {
+        'statusCode': 200,
+        'body': json.dumps('Add Member to Session!')
+    }
+
+def remove_member_from_session(event, context):
+    return {
+        'statusCode': 200,
+        'body': json.dumps('Remove Member from Session!')
+    }
+
+def add_song_to_session_queue(event, context):
+    return {
+        'statusCode': 200,
+        'body': json.dumps('Add Song to Session Queue!')
+    }
+
+def update_now_playing(event, context):
+    return {
+        'statusCode': 200,
+        'body': json.dumps('Update Now Playing!')
+    }
