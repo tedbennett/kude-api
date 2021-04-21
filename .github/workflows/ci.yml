@@ -21,11 +21,13 @@ jobs:
     
     - name: Make artifact directory
       run: mkdir -p ./artifacts/${{ github.repository }}
-
+      
+    - uses: actions/checkout@v2
+    
     - name: Create Zip File
       uses: montudor/action-zip@v0.1.0
       with:
-        args: zip -r ./artifacts/${{ github.repository }}/${{ github.sha }}.zip src
+        args: zip -qq -r ./artifacts/${{ github.repository }}/${{ github.sha }}.zip src
 
     - name: Push Zip to S3
       uses: jakejarvis/s3-sync-action@v0.3.1
