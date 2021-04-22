@@ -20,7 +20,7 @@ jobs:
     steps:
     
     - name: Make artifact directory
-      run: mkdir -p ./artifacts/${{ github.repository }}
+      run: mkdir -p ./artifacts
       
     - uses: actions/checkout@v2
     
@@ -28,7 +28,7 @@ jobs:
       uses: papeloto/action-zip@v1
       with:
           files: src/ 
-          dest: ./artifacts/${{ github.repository }}/${{ github.sha }}.zip
+          dest: ./artifacts/kude.zip
           
     - name: Push Zip to S3
       uses: jakejarvis/s3-sync-action@v0.3.1
