@@ -11,5 +11,5 @@ def get_s3_signed_url(event, context):
 def search_spotify(event, context):
     return {
         'statusCode': 200,
-        'body': json.dumps('Got s3!')
+        'body': json.dumps('Got spotify search!')
     }
