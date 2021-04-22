@@ -15,6 +15,7 @@ def get_session_by_key(event, context):
     }
 
 def create_session(event, context):
+    print(json.loads(event))
     return {
         'statusCode': 200,
         'body': json.dumps('Create session!')
