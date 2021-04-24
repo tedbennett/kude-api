@@ -39,6 +39,41 @@ def _get_client_credentials():
     return data['access_token']
 
 
+def _add_song_to_queue(access_token, uri):
+    http = urllib3.PoolManager()
+    res = http.request(
+        'POST',
+        f'https://api.spotify.com/v1/me/player/queue?uri={uri}',
+        headers={'Authorization': f'Bearer {access_token}'}
+    )
+    if res.data is None:
+        raise ApiError('Active device not found', 404)
+
+    data = json.loads(res.data.decode('utf-8'))
+    if 'error' in data:
+        raise ApiError('Active device not found', 404)
+
+    return
+
+
+def _get_currently_playing(access_token):
+    http = urllib3.PoolManager()
+    res = http.request(
+        'GET',
+        'https://api.spotify.com/v1/me/player/currently-playing',
+        headers={'Authorization': f'Bearer {access_token}'}
+    )
+    if res.data is None:
+        raise ApiError('Active device not found', 404)
+
+    data = json.loads(res.data.decode('utf-8'))
+
+    if 'item' not in data:
+        raise ApiError('Active device not found', 404)
+
+    return _parse_songs(data['item'])
+
+
 # Lambda functions
 def authorise_spotify(event, context):
     try:

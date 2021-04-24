@@ -76,7 +76,7 @@ def _get_session(session_id, table):
     response = table.get_item(Key={"session_id": session_id})
     if "Item" in response:
         return response["Item"]
-    raise ApiError("User not found", 404)
+    raise ApiError("Session not found", 404)
 
 def _parse_songs(json):
     try:
