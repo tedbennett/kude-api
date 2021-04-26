@@ -112,7 +112,13 @@ def delete_session(event, context):
         users_table = _get_table('users')
 
         for member in session["members"]:
-            _update_table(users_table, {'user_id': member}, {'session': None})
+            users_table.update_item(
+                Key={'user_id': member},
+                UpdateExpression='SET session_id = :s',
+                ExpressionAttributeValues={
+                    ':s': None
+                }
+            )
 
         table.delete_item(Key={"session_id": session_id})
 
@@ -150,9 +156,13 @@ def add_member_to_session(event, context):
             }
         )
 
-        _update_table(users_table, {'user_id': user_id}, {
-            "session": session_id
-        })
+        users_table.update_item(
+            Key={'user_id': user_id},
+            UpdateExpression='SET session_id = :s',
+            ExpressionAttributeValues={
+                ':s': session_id
+            }
+        )
 
         return _success_response()
 
@@ -185,9 +195,13 @@ def remove_member_from_session(event, context):
 
         users_table = _get_table('users')
 
-        _update_table(users_table, {'user_id': body["user_id"]}, {
-            "session": None
-        })
+        users_table.update_item(
+            Key={'user_id': body['user_id']},
+            UpdateExpression='SET session_id = :s',
+            ExpressionAttributeValues={
+                ':s': None
+            }
+        )
 
         return _success_response()
 
