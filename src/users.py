@@ -54,7 +54,7 @@ def update_user(event, context):
         if "user_name" not in body or "image_url" not in body:
             raise ApiError("Invalid body")
 
-        _update_table(table, user_id, {
+        _update_table(table, {'user_id': user_id}, {
             "user_name": body["user_name"],
             "image_url": body["image_url"]
         })

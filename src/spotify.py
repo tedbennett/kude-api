@@ -104,7 +104,7 @@ def authorise_spotify(event, context):
         if 'access_token' not in data:
             raise ApiError('Failed to get spotify credentials', 500)
 
-        _update_table(table, user_id, {
+        _update_table(table, {'user_id': user_id}, {
             "access_token": data["access_token"],
             "refresh_token": data["refresh_token"],
             "expires_at": str(int(data['expires_in'] + time.time()))
@@ -122,7 +122,7 @@ def logout_spotify(event, context):
         table = _get_table('users')
         _get_user(user_id, table)
 
-        _update_table(table, user_id, {
+        _update_table(table, {'user_id': user_id}, {
             "access_token": None,
             "refresh_token": None,
             "expires_at": None

@@ -42,7 +42,7 @@ def _extract_query(event):
 
 
 # Dynamo helper functions
-def _update_table(table, user_id, values):
+def _update_table(table, key, values):
     expression = 'SET'
     attribute_values = {}
     i = 0
@@ -53,7 +53,7 @@ def _update_table(table, user_id, values):
     expression = expression[:-1]
 
     table.update_item(
-        Key={'user_id': user_id},
+        Key=key,
         UpdateExpression=expression,
         ExpressionAttributeValues=attribute_values
     )

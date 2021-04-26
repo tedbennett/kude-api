@@ -83,9 +83,8 @@ def update_session(event, context):
         if "session_name" not in body:
             raise ApiError("Invalid body")
 
-        _update_table(table, session_id, {
-            "session_name": body["session_name"],
-            "image_url": body["image_url"] if "image_url" in body else None
+        _update_table(table, {'session_id': session_id}, {
+            "session_name": body["session_name"]
         })
 
         return _success_response()
@@ -120,7 +119,7 @@ def add_member_to_session(event, context):
         if "members" not in session:
             raise ApiError("Invalid session", 500)
 
-        _update_table(table, session_id, {
+        _update_table(table, {'session_id': session_id}, {
             "members": list(set(session["members"].append(body['user_id']))),
         })
 
@@ -143,7 +142,7 @@ def remove_member_from_session(event, context):
         if "members" not in session:
             raise ApiError("Invalid session", 500)
 
-        _update_table(table, session_id, {
+        _update_table(table, {'session_id': session_id}, {
             "members": session["members"].remove(body['user_id']),
         })
 
@@ -168,7 +167,7 @@ def add_song_to_session_queue(event, context):
 
         _add_song_to_queue(session['access_token'], body['song']['id'])
 
-        _update_table(table, session_id, {
+        _update_table(table, {'session_id': session_id}, {
             "queue": session["queue"].append(body['song']),
         })
 
@@ -197,7 +196,7 @@ def update_now_playing(event, context):
         if len(currently_playing) == 0 or currently_playing[0] <= session["currently_playing"]:
             return _success_response()
 
-        _update_table(table, session_id, {
+        _update_table(table, {'session_id': session_id}, {
             "currently_playing": str(currently_playing),
         })
 
