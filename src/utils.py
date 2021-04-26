@@ -46,10 +46,11 @@ def _update_table(table, user_id, values):
     expression = 'SET'
     attribute_values = {}
     i = 0
-    for key, value in values:
+    for key, value in values.items():
         expression += f' {key} = :val{i},'
-        attribute_values[f'val{i}'] = value
+        attribute_values[f':val{i}'] = value
         i += 1
+    expression = expression[:-1]
 
     table.update_item(
         Key={'user_id': user_id},
@@ -77,6 +78,7 @@ def _get_session(session_id, table):
     if "Item" in response:
         return response["Item"]
     raise ApiError("Session not found", 404)
+
 
 def _parse_songs(json):
     try:
