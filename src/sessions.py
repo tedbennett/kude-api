@@ -7,6 +7,7 @@ from error import ApiError
 from utils import (
     _extract_path_param,
     _extract_body,
+    _get_user,
     _get_table,
     _get_session,
     _success_response,
@@ -53,7 +54,11 @@ def create_session(event, context):
         if 'session_name' not in body or 'user_id' not in body:
             raise ApiError('Invalid body')
 
-        _check_user_exists(body['user_id'])
+        users_table = _get_table('users')
+        host = _get_user(body['user_id'], users_table)
+
+        if "access_token" not in host or host["access_token"] is None:
+            raise ApiError("Invalid session host", 400)
 
         new_id = str(uuid.uuid1())
         table.put_item(
@@ -174,16 +179,19 @@ def add_song_to_session_queue(event, context):
     try:
         session_id = _extract_path_param(event, "session_id")
         body = _extract_body(event)
-        table = _get_table('sessions')
-        session = _get_session(session_id, table)
 
         if "song" not in body:
             raise ApiError("Invalid body")
 
-        if "access_token" not in session:
+        table = _get_table('sessions')
+
+        users_table = _get_table('users')
+        host = _get_user(body['user_id'], users_table)
+
+        if "access_token" not in host or host["access_token"] is None:
             raise ApiError("Invalid session", 500)
 
-        _add_song_to_queue(session['access_token'], body['song']['id'])
+        _add_song_to_queue(host['access_token'], body['song']['id'])
 
         table.update_item(
             Key={'session_id': session_id},

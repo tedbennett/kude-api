@@ -136,20 +136,20 @@ def logout_spotify(event, context):
 
 def search_spotify(event, context):
     try:
-        query = _extract_query('query')
+        query = _extract_query(event)['query']
 
         token = _get_client_credentials()
         http = urllib3.PoolManager()
         res = http.request(
-            'POST',
+            'GET',
             f'https://api.spotify.com/v1/search?q={query}&type=track&limit=10',
             headers={
-                'Content-Type': 'application/x-www-form-urlencoded',
                 'Authorization': f'Bearer {token}'
             }
         )
+        data = json.loads(res.data.decode('utf-8'))
 
-        songs = _parse_songs(res)
+        songs = _parse_songs(data)
 
         return _success_response(songs)
 
