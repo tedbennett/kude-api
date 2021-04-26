@@ -46,11 +46,7 @@ def _add_song_to_queue(access_token, uri):
         f'https://api.spotify.com/v1/me/player/queue?uri={uri}',
         headers={'Authorization': f'Bearer {access_token}'}
     )
-    if res.data is None:
-        raise ApiError('Active device not found', 404)
-
-    data = json.loads(res.data.decode('utf-8'))
-    if 'error' in data:
+    if res.status != 2014:
         raise ApiError('Active device not found', 404)
 
     return
@@ -104,11 +100,17 @@ def authorise_spotify(event, context):
         if 'access_token' not in data:
             raise ApiError('Failed to get spotify credentials', 500)
 
-        _update_table(table, {'user_id': user_id}, {
-            "access_token": data["access_token"],
-            "refresh_token": data["refresh_token"],
-            "expires_at": str(int(data['expires_in'] + time.time()))
-        })
+        expires_at = str(int(data['expires_in'] + time.time()))
+
+        table.update_item(
+            Key={'user_id': user_id},
+            UpdateExpression='SET access_token=:a, refresh_token=:r, expires_at=:e',
+            ExpressionAttributeValues={
+                ":a": data["access_token"],
+                ":r": data["refresh_token"],
+                ":e": expires_at
+            }
+        )
 
         return _success_response()
 

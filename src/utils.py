@@ -72,11 +72,6 @@ def _get_user(user_id, table):
     raise ApiError("User not found", 404)
 
 
-def _check_user_exists(user_id):
-    table = _get_table('users')
-    _get_user(user_id, table)
-
-
 # Session helper functions
 def _get_session(session_id, table):
     response = table.get_item(Key={"session_id": session_id})

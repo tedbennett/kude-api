@@ -12,8 +12,7 @@ from utils import (
     _get_session,
     _success_response,
     _process_api_error,
-    _update_table,
-    _check_user_exists
+    _update_table
 )
 from spotify import _add_song_to_queue, _get_currently_playing
 
@@ -75,6 +74,10 @@ def create_session(event, context):
             }
         )
 
+        _update_table(users_table, {'user_id': body['user_id']}, {
+            "session": new_id
+        })
+
         return _success_response({"session_id": new_id})
 
     except ApiError as e:
@@ -105,6 +108,11 @@ def delete_session(event, context):
     try:
         session_id = _extract_path_param(event, "session_id")
         table = _get_table('sessions')
+        session = _get_session(session_id, table)
+        users_table = _get_table('users')
+
+        for member in session["members"]:
+            _update_table(users_table, {'user_id': member}, {'session': None})
 
         table.delete_item(Key={"session_id": session_id})
 
@@ -123,22 +131,28 @@ def add_member_to_session(event, context):
 
         if "user_id" not in body:
             raise ApiError("Invalid body")
+        user_id = body['user_id']
 
-        _check_user_exists(body['user_id'])
+        users_table = _get_table('users')
+        _get_user(user_id, users_table)
 
         if "members" not in session:
             raise ApiError("Invalid session", 500)
 
-        if body["user_id"] in session["members"]:
+        if user_id in session["members"]:
             return _success_response()
 
         table.update_item(
             Key={'session_id': session_id},
             UpdateExpression='SET members = list_append(members, :m)',
             ExpressionAttributeValues={
-                ':m': [body['user_id']]
+                ':m': [user_id]
             }
         )
+
+        _update_table(users_table, {'user_id': user_id}, {
+            "session": session_id
+        })
 
         return _success_response()
 
@@ -169,6 +183,12 @@ def remove_member_from_session(event, context):
             UpdateExpression=f'REMOVE members[{index}]'
         )
 
+        users_table = _get_table('users')
+
+        _update_table(users_table, {'user_id': body["user_id"]}, {
+            "session": None
+        })
+
         return _success_response()
 
     except ApiError as e:
@@ -184,9 +204,13 @@ def add_song_to_session_queue(event, context):
             raise ApiError("Invalid body")
 
         table = _get_table('sessions')
+        session = _get_session(session_id, table)
+
+        if "host" not in session:
+            raise ApiError("Invalid host", 500)
 
         users_table = _get_table('users')
-        host = _get_user(body['user_id'], users_table)
+        host = _get_user(session['host'], users_table)
 
         if "access_token" not in host or host["access_token"] is None:
             raise ApiError("Invalid session", 500)
