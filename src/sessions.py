@@ -11,7 +11,8 @@ from utils import (
     _get_session,
     _success_response,
     _process_api_error,
-    _update_table
+    _update_table,
+    _check_user_exists
 )
 from spotify import _add_song_to_queue, _get_currently_playing
 
@@ -30,15 +31,15 @@ def get_session(event, context):
 
 def get_session_by_key(event, context):
     try:
-        session_key = _extract_path_param(event, "session_key")
+        session_key = _extract_path_param(event, "key")
         table = _get_table('sessions')
         response = table.scan(
             FilterExpression=Attr('key').eq(session_key)
         )
-        if "Item" not in response:
-            raise ApiError("User not found", 404)
+        if "Items" not in response or len(response["Items"]) == 0:
+            raise ApiError("Session not found", 404)
 
-        return _success_response(response["Item"])
+        return _success_response(response["Items"][0])
 
     except ApiError as e:
         return _process_api_error(e)
@@ -51,6 +52,8 @@ def create_session(event, context):
 
         if 'session_name' not in body or 'user_id' not in body:
             raise ApiError('Invalid body')
+
+        _check_user_exists(body['user_id'])
 
         new_id = str(uuid.uuid1())
         table.put_item(
@@ -116,12 +119,21 @@ def add_member_to_session(event, context):
         if "user_id" not in body:
             raise ApiError("Invalid body")
 
+        _check_user_exists(body['user_id'])
+
         if "members" not in session:
             raise ApiError("Invalid session", 500)
 
-        _update_table(table, {'session_id': session_id}, {
-            "members": list(set(session["members"].append(body['user_id']))),
-        })
+        if body["user_id"] in session["members"]:
+            return _success_response()
+
+        table.update_item(
+            Key={'session_id': session_id},
+            UpdateExpression='SET members = list_append(members, :m)',
+            ExpressionAttributeValues={
+                ':m': [body['user_id']]
+            }
+        )
 
         return _success_response()
 
@@ -142,9 +154,15 @@ def remove_member_from_session(event, context):
         if "members" not in session:
             raise ApiError("Invalid session", 500)
 
-        _update_table(table, {'session_id': session_id}, {
-            "members": session["members"].remove(body['user_id']),
-        })
+        try:
+            index = session["members"].index(body["user_id"])
+        except ValueError:
+            raise ApiError("User not found", 404)
+
+        table.update_item(
+            Key={'session_id': session_id},
+            UpdateExpression=f'REMOVE members[{index}]'
+        )
 
         return _success_response()
 
@@ -162,14 +180,18 @@ def add_song_to_session_queue(event, context):
         if "song" not in body:
             raise ApiError("Invalid body")
 
-        if "queue" not in session or "access_token" not in session:
+        if "access_token" not in session:
             raise ApiError("Invalid session", 500)
 
         _add_song_to_queue(session['access_token'], body['song']['id'])
 
-        _update_table(table, {'session_id': session_id}, {
-            "queue": session["queue"].append(body['song']),
-        })
+        table.update_item(
+            Key={'session_id': session_id},
+            UpdateExpression='SET queue = list_append(queue, :s)',
+            ExpressionAttributeValues={
+                ':s': [body["song"]]
+            }
+        )
 
         return _success_response()
 
