@@ -49,7 +49,7 @@ def create_session(event, context):
         body = _extract_body(event)
         table = _get_table('sessions')
 
-        if 'name' not in body or 'user_id' not in body:
+        if 'session_name' not in body or 'user_id' not in body:
             raise ApiError('Invalid body')
 
         new_id = str(uuid.uuid1())
@@ -58,7 +58,7 @@ def create_session(event, context):
                 "session_id": new_id,
                 'key': str(uuid.uuid4().hex[:6]).upper(),
                 'host': body['user_id'],
-                "name": body["name"],
+                "session_name": body["session_name"],
                 "members": [body["user_id"]],
                 "queue": [],
                 "currently_playing": None,
@@ -80,11 +80,11 @@ def update_session(event, context):
         table = _get_table('sessions')
         _get_session(session_id, table)
 
-        if "name" not in body:
+        if "session_name" not in body:
             raise ApiError("Invalid body")
 
         _update_table(table, session_id, {
-            "name": body["name"],
+            "session_name": body["session_name"],
             "image_url": body["image_url"] if "image_url" in body else None
         })
 

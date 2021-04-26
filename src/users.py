@@ -33,7 +33,7 @@ def create_user(event, context):
         table.put_item(
             Item={
                 "user_id": new_id,
-                "name": body["name"] if "name" in body else None,
+                "user_name": body["user_name"] if "user_name" in body else None,
                 "image_url": body["image_url"] if "image_url" in body else None,
             }
         )
@@ -51,11 +51,11 @@ def update_user(event, context):
         table = _get_table('users')
         _get_user(user_id, table)
 
-        if "name" not in body or "image_url" not in body:
+        if "user_name" not in body or "image_url" not in body:
             raise ApiError("Invalid body")
 
         _update_table(table, user_id, {
-            "name": body["name"],
+            "user_name": body["user_name"],
             "image_url": body["image_url"]
         })
 
