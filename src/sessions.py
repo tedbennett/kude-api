@@ -80,11 +80,11 @@ def update_session(event, context):
         table = _get_table('sessions')
         _get_session(session_id, table)
 
-        if "session_name" not in body:
+        if "name" not in body:
             raise ApiError("Invalid body")
 
         _update_table(table, session_id, {
-            "session_name": body["session_name"],
+            "name": body["name"],
             "image_url": body["image_url"] if "image_url" in body else None
         })
 
