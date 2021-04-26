@@ -11,10 +11,9 @@ from utils import (
     _get_session,
     _success_response,
     _process_api_error,
-    _update_table,
-    _add_song_to_queue,
-    _get_currently_playing
+    _update_table
 )
+from spotify import _add_song_to_queue, _get_currently_playing
 
 
 def get_session(event, context):
@@ -63,8 +62,8 @@ def create_session(event, context):
                 "members": [body["user_id"]],
                 "queue": [],
                 "currently_playing": None,
-                "created_at": time.time(),
-                "updated_at": time.time()
+                "created_at": str(int(time.time())),
+                "updated_at": str(int(time.time()))
             }
         )
 

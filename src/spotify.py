@@ -11,7 +11,7 @@ from utils import (
     _extract_body,
     _extract_query,
     _get_user,
-    _get_user_table,
+    _get_table,
     _success_response,
     _process_api_error,
     _update_table,
@@ -80,7 +80,7 @@ def authorise_spotify(event, context):
         user_id = _extract_path_param(event, "user_id")
         body = _extract_body(event)
 
-        table = _get_user_table()
+        table = _get_table('users')
         _get_user(user_id, table)
 
         if "code" not in body:
@@ -119,7 +119,7 @@ def authorise_spotify(event, context):
 def logout_spotify(event, context):
     try:
         user_id = _extract_path_param(event, "user_id")
-        table = _get_user_table()
+        table = _get_table('users')
         _get_user(user_id, table)
 
         _update_table(table, user_id, {
