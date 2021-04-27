@@ -70,8 +70,7 @@ def create_session(event, context):
                 "queue": [],
                 "currently_playing": None,
                 "created_at": str(int(time.time())),
-                "updated_at": str(int(time.time())),
-                "currently_playing": 0
+                "updated_at": str(int(time.time()))
             }
         )
 
