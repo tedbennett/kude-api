@@ -14,7 +14,6 @@ from utils import (
     _get_table,
     _success_response,
     _process_api_error,
-    _update_table,
     _parse_songs
 )
 
@@ -124,11 +123,15 @@ def logout_spotify(event, context):
         table = _get_table('users')
         _get_user(user_id, table)
 
-        _update_table(table, {'user_id': user_id}, {
-            "access_token": None,
-            "refresh_token": None,
-            "expires_at": None
-        })
+        table.update_item(
+            Key={'user_id': user_id},
+            UpdateExpression='SET access_token=:a, refresh_token=:r, expires_at=:e',
+            ExpressionAttributeValues={
+                ":a": None,
+                ":r": None,
+                ":e": None
+            }
+        )
 
         return _success_response()
 
