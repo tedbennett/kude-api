@@ -237,9 +237,9 @@ def add_song_to_session_queue(event, context):
             access_token, expires_in = _refresh_credentials(host['refresh_token'])
             expires_at = str(int(expires_in + time.time()))
 
-            table.update_item(
+            users_table.update_item(
                 Key={'user_id': session['host']},
-                UpdateExpression='SET access_token=:a, refresh_token=:r, expires_at=:e',
+                UpdateExpression='SET access_token=:a, expires_at=:e',
                 ExpressionAttributeValues={
                     ":a": access_token,
                     ":e": expires_at
@@ -278,9 +278,9 @@ def update_now_playing(event, context):
             access_token, expires_in = _refresh_credentials(host['refresh_token'])
             expires_at = str(int(expires_in + time.time()))
 
-            table.update_item(
+            users_table.update_item(
                 Key={'user_id': session['host']},
-                UpdateExpression='SET access_token=:a, refresh_token=:r, expires_at=:e',
+                UpdateExpression='SET access_token=:a, expires_at=:e',
                 ExpressionAttributeValues={
                     ":a": access_token,
                     ":e": expires_at
@@ -292,7 +292,7 @@ def update_now_playing(event, context):
 
         currently_playing_song = _get_currently_playing(host["access_token"])
 
-        currently_playing = [i for i, el in enumerate(session['songs']) if el['id'] == currently_playing_song['uri']]
+        currently_playing = [i for i, el in enumerate(session['queue']) if el['id'] == currently_playing_song['id']]
 
         if len(currently_playing) == 0 or currently_playing[0] <= session["currently_playing"]:
             return _success_response()

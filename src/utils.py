@@ -80,16 +80,21 @@ def _get_session(session_id, table):
     raise ApiError("Session not found", 404)
 
 
+def _parse_song(song):
+    return {
+        "id": song["uri"],
+        'name': song['name'],
+        'album': song['album']['name'],
+        'artist': song['artists'][0]['name'],
+        'image_url': song['album']['images'][0]["url"]
+    }
+
+
 def _parse_songs(json):
     try:
+        print(json["name"])
         return list(map(
-            lambda x: {
-                "id": x["uri"],
-                'name': x['name'],
-                'album': x['album']['name'],
-                'artist': x['artists'][0]['name'],
-                'image_url': x['album']['images'][0].url
-            },
+            lambda x: _parse_song(x),
             json["data"]["tracks"]))
     except Exception:
         raise ApiError('Could not read Spotify response')

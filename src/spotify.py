@@ -76,7 +76,7 @@ def _refresh_credentials(refresh_token):
     )
     data = json.loads(res.data.decode('utf-8'))
 
-    if 'access_token' not in data or 'refresh_token' not in data or 'expires_in' not in data:
+    if 'access_token' not in data or 'expires_in' not in data:
         raise ApiError('Failed to get spotify credentials', 500)
 
     return (data['access_token'], data['expires_in'])
