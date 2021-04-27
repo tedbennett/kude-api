@@ -2,7 +2,6 @@ import urllib3
 from urllib.parse import urlencode
 import json
 import os
-import time
 
 
 from error import ApiError
@@ -14,7 +13,8 @@ from utils import (
     _get_table,
     _success_response,
     _process_api_error,
-    _parse_songs
+    _parse_songs,
+    _update_credentials
 )
 
 
@@ -36,6 +36,50 @@ def _get_client_credentials():
         raise ApiError('Failed to get spotify credentials', 500)
 
     return data['access_token']
+
+
+def _get_code_credentials(code):
+    http = urllib3.PoolManager()
+    encoded_args = urlencode({
+        'grant_type': 'authorization_code',
+        'code': code,
+        'redirect_uri': 'queued://oauth-callback/',
+        'client_id': '1e6ef0ef377c443e8ebf714b5b77cad7',
+        'client_secret': os.environ.get('SPOTIFY_SECRET')
+    })
+    res = http.request(
+        'POST',
+        f'https://accounts.spotify.com/api/token?{encoded_args}',
+        headers={'Content-Type': 'application/x-www-form-urlencoded'}
+    )
+    data = json.loads(res.data.decode('utf-8'))
+
+    if 'access_token' not in data or 'refresh_token' not in data or 'expires_in' not in data:
+        raise ApiError('Failed to get spotify credentials', 500)
+
+    return (data['access_token'], data['refresh_token'], data['expires_in'])
+
+
+def _refresh_credentials(refresh_token):
+    http = urllib3.PoolManager()
+    encoded_args = urlencode({
+        'grant_type': 'refresh_token',
+        'refresh_token': refresh_token,
+        'client_id': '1e6ef0ef377c443e8ebf714b5b77cad7',
+        'client_secret': os.environ.get('SPOTIFY_SECRET')
+    })
+
+    res = http.request(
+        'POST',
+        f'https://accounts.spotify.com/api/token?{encoded_args}',
+        headers={'Content-Type': 'application/x-www-form-urlencoded'}
+    )
+    data = json.loads(res.data.decode('utf-8'))
+
+    if 'access_token' not in data or 'refresh_token' not in data or 'expires_in' not in data:
+        raise ApiError('Failed to get spotify credentials', 500)
+
+    return (data['access_token'], data['refresh_token'], data['expires_in'])
 
 
 def _add_song_to_queue(access_token, uri):
@@ -81,35 +125,9 @@ def authorise_spotify(event, context):
         if "code" not in body:
             raise ApiError("Invalid body")
 
-        http = urllib3.PoolManager()
-        encoded_args = urlencode({
-            'grant_type': 'authorization_code',
-            'code': body['code'],
-            'redirect_uri': 'queued://oauth-callback/',
-            'client_id': '1e6ef0ef377c443e8ebf714b5b77cad7',
-            'client_secret': os.environ.get('SPOTIFY_SECRET')
-        })
-        res = http.request(
-            'POST',
-            f'https://accounts.spotify.com/api/token?{encoded_args}',
-            headers={'Content-Type': 'application/x-www-form-urlencoded'}
-        )
-        data = json.loads(res.data.decode('utf-8'))
+        access_token, refresh_token, expires_in = _get_code_credentials(body['code'])
 
-        if 'access_token' not in data:
-            raise ApiError('Failed to get spotify credentials', 500)
-
-        expires_at = str(int(data['expires_in'] + time.time()))
-
-        table.update_item(
-            Key={'user_id': user_id},
-            UpdateExpression='SET access_token=:a, refresh_token=:r, expires_at=:e',
-            ExpressionAttributeValues={
-                ":a": data["access_token"],
-                ":r": data["refresh_token"],
-                ":e": expires_at
-            }
-        )
+        _update_credentials(user_id, table, access_token, refresh_token, expires_in)
 
         return _success_response()
 

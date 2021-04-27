@@ -12,9 +12,10 @@ from utils import (
     _get_session,
     _success_response,
     _process_api_error,
-    _update_table
+    _update_table,
+    _update_credentials
 )
-from spotify import _add_song_to_queue, _get_currently_playing
+from spotify import _add_song_to_queue, _get_currently_playing, _refresh_credentials
 
 
 def get_session(event, context):
@@ -74,9 +75,13 @@ def create_session(event, context):
             }
         )
 
-        _update_table(users_table, {'user_id': body['user_id']}, {
-            "session": new_id
-        })
+        users_table.update_item(
+            Key={'user_id': body['user_id']},
+            UpdateExpression='SET session_id = :s',
+            ExpressionAttributeValues={
+                ':s': None
+            }
+        )
 
         return _success_response({"session_id": new_id})
 
@@ -229,6 +234,10 @@ def add_song_to_session_queue(event, context):
         if "access_token" not in host or host["access_token"] is None:
             raise ApiError("Invalid session", 500)
 
+        if int(host['expires_at']) > time.time():
+            access_token, refresh_token, expires_in = _refresh_credentials(host['refresh_token'])
+            _update_credentials(session['host'], users_table, access_token, refresh_token, expires_in)
+
         _add_song_to_queue(host['access_token'], body['song']['id'])
 
         table.update_item(
@@ -251,22 +260,33 @@ def update_now_playing(event, context):
         table = _get_table('sessions')
         session = _get_session(session_id, table)
 
-        if "updated_at" not in session or "access_token" not in session or "currently_playing" not in session:
+        if "updated_at" not in session or "currently_playing" not in session or "host" not in session:
             raise ApiError("Invalid session", 500)
 
-        if session["updated_at"] + 90 > time.time():
+        users_table = _get_table('users')
+        host = _get_user(session["host"], users_table)
+
+        if int(host['expires_at']) > time.time():
+            access_token, refresh_token, expires_in = _refresh_credentials(host['refresh_token'])
+            _update_credentials(session['host'], users_table, access_token, refresh_token, expires_in)
+
+        if int(session["updated_at"]) + 90 > time.time():
             return _success_response()
 
-        currently_playing_song = _get_currently_playing(session["access_token"])
+        currently_playing_song = _get_currently_playing(host["access_token"])
 
         currently_playing = [i for i, el in enumerate(session['songs']) if el['id'] == currently_playing_song['uri']]
 
         if len(currently_playing) == 0 or currently_playing[0] <= session["currently_playing"]:
             return _success_response()
 
-        _update_table(table, {'session_id': session_id}, {
-            "currently_playing": str(currently_playing),
-        })
+        table.update_item(
+            Key={'session_id': session_id},
+            UpdateExpression='SET currently_playing = :s',
+            ExpressionAttributeValues={
+                ':s': str(currently_playing)
+            }
+        )
 
         return _success_response()
 

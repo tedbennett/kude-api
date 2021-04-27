@@ -1,5 +1,6 @@
 import boto3
 import json
+import time
 
 from error import ApiError
 
@@ -78,6 +79,20 @@ def _get_session(session_id, table):
     if "Item" in response:
         return response["Item"]
     raise ApiError("Session not found", 404)
+
+
+def _update_credentials(user_id, table, access_token, refresh_token, expires_in):
+    expires_at = str(int(expires_in + time.time()))
+
+    table.update_item(
+        Key={'user_id': user_id},
+        UpdateExpression='SET access_token=:a, refresh_token=:r, expires_at=:e',
+        ExpressionAttributeValues={
+            ":a": access_token,
+            ":r": refresh_token,
+            ":e": expires_at
+        }
+    )
 
 
 def _parse_songs(json):
