@@ -42,23 +42,6 @@ def _extract_query(event):
 
 
 # Dynamo helper functions
-def _update_table(table, key, values):
-    expression = 'SET'
-    attribute_values = {}
-    i = 0
-    for key, value in values.items():
-        expression += f' {key} = :val{i},'
-        attribute_values[f':val{i}'] = value
-        i += 1
-    expression = expression[:-1]
-
-    table.update_item(
-        Key=key,
-        UpdateExpression=expression,
-        ExpressionAttributeValues=attribute_values
-    )
-
-
 def _get_table(name):
     dynamodb = boto3.resource("dynamodb")
     return dynamodb.Table(f"kude-{name}")  # pylint: disable=no-member

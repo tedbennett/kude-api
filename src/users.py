@@ -7,8 +7,7 @@ from utils import (
     _get_table,
     _get_user,
     _success_response,
-    _process_api_error,
-    _update_table
+    _process_api_error
 )
 
 
@@ -54,10 +53,14 @@ def update_user(event, context):
         if "user_name" not in body or "image_url" not in body:
             raise ApiError("Invalid body")
 
-        _update_table(table, {'user_id': user_id}, {
-            "user_name": body["user_name"],
-            "image_url": body["image_url"]
-        })
+        table.update_item(
+            Key={'user_id': user_id},
+            UpdateExpression='SET user_name = :u, image_url = :i',
+            ExpressionAttributeValues={
+                ':u': body["user_name"],
+                ':i': body["image_url"]
+            }
+        )
 
         return _success_response()
 

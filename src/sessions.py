@@ -11,8 +11,7 @@ from utils import (
     _get_table,
     _get_session,
     _success_response,
-    _process_api_error,
-    _update_table
+    _process_api_error
 )
 from spotify import _add_song_to_queue, _get_currently_playing, _refresh_credentials
 
@@ -98,9 +97,13 @@ def update_session(event, context):
         if "session_name" not in body:
             raise ApiError("Invalid body")
 
-        _update_table(table, {'session_id': session_id}, {
-            "session_name": body["session_name"]
-        })
+        table.update_item(
+            Key={'session_id': session_id},
+            UpdateExpression='SET session_name = :s',
+            ExpressionAttributeValues={
+                ':s': body["session_name"]
+            }
+        )
 
         return _success_response()
 
