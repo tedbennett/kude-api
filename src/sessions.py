@@ -12,8 +12,7 @@ from utils import (
     _get_session,
     _success_response,
     _process_api_error,
-    _update_table,
-    _update_credentials
+    _update_table
 )
 from spotify import _add_song_to_queue, _get_currently_playing, _refresh_credentials
 
@@ -234,9 +233,18 @@ def add_song_to_session_queue(event, context):
         if "access_token" not in host or host["access_token"] is None:
             raise ApiError("Invalid session", 500)
 
-        if int(host['expires_at']) > time.time():
-            access_token, refresh_token, expires_in = _refresh_credentials(host['refresh_token'])
-            _update_credentials(session['host'], users_table, access_token, refresh_token, expires_in)
+        if int(host['expires_at']) <= time.time():
+            access_token, expires_in = _refresh_credentials(host['refresh_token'])
+            expires_at = str(int(expires_in + time.time()))
+
+            table.update_item(
+                Key={'user_id': session['host']},
+                UpdateExpression='SET access_token=:a, refresh_token=:r, expires_at=:e',
+                ExpressionAttributeValues={
+                    ":a": access_token,
+                    ":e": expires_at
+                }
+            )
 
         _add_song_to_queue(host['access_token'], body['song']['id'])
 
@@ -266,9 +274,18 @@ def update_now_playing(event, context):
         users_table = _get_table('users')
         host = _get_user(session["host"], users_table)
 
-        if int(host['expires_at']) > time.time():
-            access_token, refresh_token, expires_in = _refresh_credentials(host['refresh_token'])
-            _update_credentials(session['host'], users_table, access_token, refresh_token, expires_in)
+        if int(host['expires_at']) <= time.time():
+            access_token, expires_in = _refresh_credentials(host['refresh_token'])
+            expires_at = str(int(expires_in + time.time()))
+
+            table.update_item(
+                Key={'user_id': session['host']},
+                UpdateExpression='SET access_token=:a, refresh_token=:r, expires_at=:e',
+                ExpressionAttributeValues={
+                    ":a": access_token,
+                    ":e": expires_at
+                }
+            )
 
         if int(session["updated_at"]) + 90 > time.time():
             return _success_response()

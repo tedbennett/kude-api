@@ -2,6 +2,7 @@ import urllib3
 from urllib.parse import urlencode
 import json
 import os
+import time
 
 
 from error import ApiError
@@ -13,8 +14,7 @@ from utils import (
     _get_table,
     _success_response,
     _process_api_error,
-    _parse_songs,
-    _update_credentials
+    _parse_songs
 )
 
 
@@ -79,7 +79,7 @@ def _refresh_credentials(refresh_token):
     if 'access_token' not in data or 'refresh_token' not in data or 'expires_in' not in data:
         raise ApiError('Failed to get spotify credentials', 500)
 
-    return (data['access_token'], data['refresh_token'], data['expires_in'])
+    return (data['access_token'], data['expires_in'])
 
 
 def _add_song_to_queue(access_token, uri):
@@ -127,7 +127,17 @@ def authorise_spotify(event, context):
 
         access_token, refresh_token, expires_in = _get_code_credentials(body['code'])
 
-        _update_credentials(user_id, table, access_token, refresh_token, expires_in)
+        expires_at = str(int(expires_in + time.time()))
+
+        table.update_item(
+            Key={'user_id': user_id},
+            UpdateExpression='SET access_token=:a, refresh_token=:r, expires_at=:e',
+            ExpressionAttributeValues={
+                ":a": access_token,
+                ":r": refresh_token,
+                ":e": expires_at
+            }
+        )
 
         return _success_response()
 
