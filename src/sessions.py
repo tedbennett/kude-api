@@ -2,7 +2,7 @@ import boto3
 from boto3.dynamodb.conditions import Attr
 import time
 import uuid
-
+import json
 
 from error import ApiError
 from utils import (
@@ -18,6 +18,16 @@ from spotify import _add_song_to_queue, _get_currently_playing, _refresh_credent
 dynamodb = boto3.resource("dynamodb")
 users_table = dynamodb.Table("kude-users")
 sessions_table = dynamodb.Table("kude-sessions")
+
+lambda_client = boto3.resource("lambda")
+
+
+def _send_session_update(session_id):
+    lambda_client.invoke(
+        FunctionName='arn:aws:lambda:eu-west-1:183749202281:function:kude-ws-update-session',
+        InvocationType='RequestResponse',
+        Payload=json.dumps({'session_id': session_id})
+    )
 
 
 def get_session(event, context):
@@ -104,6 +114,8 @@ def update_session(event, context):
             }
         )
 
+        _send_session_update(session_id)
+
         return _success_response()
 
     except ApiError as e:
@@ -123,6 +135,8 @@ def delete_session(event, context):
                     ':s': None
                 }
             )
+
+        _send_session_update(session_id)
 
         sessions_table.delete_item(Key={"session_id": session_id})
 
@@ -166,6 +180,8 @@ def add_member_to_session(event, context):
             }
         )
 
+        _send_session_update(session_id)
+
         return _success_response()
 
     except ApiError as e:
@@ -201,6 +217,8 @@ def remove_member_from_session(event, context):
                 ':s': None
             }
         )
+
+        _send_session_update(session_id)
 
         return _success_response()
 
@@ -248,6 +266,8 @@ def add_song_to_session_queue(event, context):
                 ':s': [body["song"]]
             }
         )
+
+        _send_session_update(session_id)
 
         return _success_response()
 
@@ -300,6 +320,8 @@ def update_now_playing(event, context):
                 ':u': str(int(time.time()))
             }
         )
+
+        _send_session_update(session_id)
 
         return _success_response()
 
