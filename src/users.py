@@ -38,7 +38,7 @@ def create_user(event, context):
             }
         )
 
-        return _success_response({"user_id": new_id})
+        return _success_response(new_id)
 
     except ApiError as e:
         return _process_api_error(e)
