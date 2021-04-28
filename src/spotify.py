@@ -151,11 +151,12 @@ def authorise_spotify(event, context):
 
         users_table.update_item(
             Key={'user_id': user_id},
-            UpdateExpression='SET access_token=:a, refresh_token=:r, expires_at=:e',
+            UpdateExpression='SET access_token=:a, refresh_token=:r, expires_at=:e, host=:h',
             ExpressionAttributeValues={
                 ":a": access_token,
                 ":r": refresh_token,
-                ":e": expires_at
+                ":e": expires_at,
+                ':h': True
             }
         )
 
@@ -172,11 +173,12 @@ def logout_spotify(event, context):
 
         users_table.update_item(
             Key={'user_id': user_id},
-            UpdateExpression='SET access_token=:a, refresh_token=:r, expires_at=:e',
+            UpdateExpression='SET access_token=:a, refresh_token=:r, expires_at=:e, host=:h',
             ExpressionAttributeValues={
                 ":a": None,
                 ":r": None,
-                ":e": None
+                ":e": None,
+                ':h': False
             }
         )
 

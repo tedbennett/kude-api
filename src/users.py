@@ -35,6 +35,7 @@ def create_user(event, context):
                 "user_id": new_id,
                 "user_name": body["user_name"] if "user_name" in body else None,
                 "image_url": body["image_url"] if "image_url" in body else None,
+                "host": False
             }
         )
 
