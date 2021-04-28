@@ -3,7 +3,7 @@ from urllib.parse import urlencode
 import json
 import os
 import time
-
+import boto3
 
 from error import ApiError
 from utils import (
@@ -11,11 +11,14 @@ from utils import (
     _extract_body,
     _extract_query,
     _get_user,
-    _get_table,
     _success_response,
     _process_api_error,
+    _parse_song,
     _parse_songs
 )
+
+dynamodb = boto3.resource("dynamodb")
+users_table = dynamodb.Table("kude-users")
 
 
 def _get_client_credentials():
@@ -82,6 +85,21 @@ def _refresh_credentials(refresh_token):
     return (data['access_token'], data['expires_in'])
 
 
+def _get_user_profile(access_token):
+    http = urllib3.PoolManager()
+    res = http.request(
+        'GET',
+        'https://api.spotify.com/v1/me',
+        headers={'Authorization': f'Bearer {access_token}'}
+    )
+    data = json.loads(res.data.decode('utf-8'))
+
+    if 'product' not in data:
+        raise ApiError('Failed to find user profile', 404)
+
+    return data['product'] == 'premium'
+
+
 def _add_song_to_queue(access_token, uri):
     http = urllib3.PoolManager()
     res = http.request(
@@ -89,7 +107,7 @@ def _add_song_to_queue(access_token, uri):
         f'https://api.spotify.com/v1/me/player/queue?uri={uri}',
         headers={'Authorization': f'Bearer {access_token}'}
     )
-    if res.status != 2014:
+    if res.status != 204:
         raise ApiError('Active device not found', 404)
 
     return
@@ -110,7 +128,7 @@ def _get_currently_playing(access_token):
     if 'item' not in data:
         raise ApiError('Active device not found', 404)
 
-    return _parse_songs(data['item'])
+    return _parse_song(data['item'])
 
 
 # Lambda functions
@@ -119,8 +137,7 @@ def authorise_spotify(event, context):
         user_id = _extract_path_param(event, "user_id")
         body = _extract_body(event)
 
-        table = _get_table('users')
-        _get_user(user_id, table)
+        _get_user(user_id, users_table)
 
         if "code" not in body:
             raise ApiError("Invalid body")
@@ -129,7 +146,10 @@ def authorise_spotify(event, context):
 
         expires_at = str(int(expires_in + time.time()))
 
-        table.update_item(
+        if not _get_user_profile(access_token):
+            raise ApiError("Spotify account is not premium", 403)
+
+        users_table.update_item(
             Key={'user_id': user_id},
             UpdateExpression='SET access_token=:a, refresh_token=:r, expires_at=:e',
             ExpressionAttributeValues={
@@ -148,10 +168,9 @@ def authorise_spotify(event, context):
 def logout_spotify(event, context):
     try:
         user_id = _extract_path_param(event, "user_id")
-        table = _get_table('users')
-        _get_user(user_id, table)
+        _get_user(user_id, users_table)
 
-        table.update_item(
+        users_table.update_item(
             Key={'user_id': user_id},
             UpdateExpression='SET access_token=:a, refresh_token=:r, expires_at=:e',
             ExpressionAttributeValues={

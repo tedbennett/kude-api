@@ -1,3 +1,4 @@
+import boto3
 from boto3.dynamodb.conditions import Attr
 import time
 import uuid
@@ -8,19 +9,21 @@ from utils import (
     _extract_path_param,
     _extract_body,
     _get_user,
-    _get_table,
     _get_session,
     _success_response,
     _process_api_error
 )
 from spotify import _add_song_to_queue, _get_currently_playing, _refresh_credentials
 
+dynamodb = boto3.resource("dynamodb")
+users_table = dynamodb.Table("kude-users")
+sessions_table = dynamodb.Table("kude-sessions")
+
 
 def get_session(event, context):
     try:
         session_id = _extract_path_param(event, "session_id")
-        table = _get_table('sessions')
-        session = _get_session(session_id, table)
+        session = _get_session(session_id, sessions_table)
 
         return _success_response(session)
 
@@ -31,8 +34,7 @@ def get_session(event, context):
 def get_session_by_key(event, context):
     try:
         session_key = _extract_path_param(event, "key")
-        table = _get_table('sessions')
-        response = table.scan(
+        response = sessions_table.scan(
             FilterExpression=Attr('key').eq(session_key)
         )
         if "Items" not in response or len(response["Items"]) == 0:
@@ -47,19 +49,17 @@ def get_session_by_key(event, context):
 def create_session(event, context):
     try:
         body = _extract_body(event)
-        table = _get_table('sessions')
 
         if 'session_name' not in body or 'user_id' not in body:
             raise ApiError('Invalid body')
 
-        users_table = _get_table('users')
         host = _get_user(body['user_id'], users_table)
 
         if "access_token" not in host or host["access_token"] is None:
             raise ApiError("Invalid session host", 400)
 
         new_id = str(uuid.uuid1())
-        table.put_item(
+        sessions_table.put_item(
             Item={
                 "session_id": new_id,
                 'key': str(uuid.uuid4().hex[:6]).upper(),
@@ -69,7 +69,7 @@ def create_session(event, context):
                 "queue": [],
                 "currently_playing": None,
                 "created_at": str(int(time.time())),
-                "updated_at": str(int(time.time()))
+                "updated_at": None
             }
         )
 
@@ -91,13 +91,12 @@ def update_session(event, context):
     try:
         session_id = _extract_path_param(event, "session_id")
         body = _extract_body(event)
-        table = _get_table('sessions')
-        _get_session(session_id, table)
+        _get_session(session_id, sessions_table)
 
         if "session_name" not in body:
             raise ApiError("Invalid body")
 
-        table.update_item(
+        sessions_table.update_item(
             Key={'session_id': session_id},
             UpdateExpression='SET session_name = :s',
             ExpressionAttributeValues={
@@ -114,9 +113,7 @@ def update_session(event, context):
 def delete_session(event, context):
     try:
         session_id = _extract_path_param(event, "session_id")
-        table = _get_table('sessions')
-        session = _get_session(session_id, table)
-        users_table = _get_table('users')
+        session = _get_session(session_id, sessions_table)
 
         for member in session["members"]:
             users_table.update_item(
@@ -127,7 +124,7 @@ def delete_session(event, context):
                 }
             )
 
-        table.delete_item(Key={"session_id": session_id})
+        sessions_table.delete_item(Key={"session_id": session_id})
 
         return _success_response()
 
@@ -139,14 +136,12 @@ def add_member_to_session(event, context):
     try:
         session_id = _extract_path_param(event, "session_id")
         body = _extract_body(event)
-        table = _get_table('sessions')
-        session = _get_session(session_id, table)
+        session = _get_session(session_id, sessions_table)
 
         if "user_id" not in body:
             raise ApiError("Invalid body")
         user_id = body['user_id']
 
-        users_table = _get_table('users')
         _get_user(user_id, users_table)
 
         if "members" not in session:
@@ -155,7 +150,7 @@ def add_member_to_session(event, context):
         if user_id in session["members"]:
             return _success_response()
 
-        table.update_item(
+        sessions_table.update_item(
             Key={'session_id': session_id},
             UpdateExpression='SET members = list_append(members, :m)',
             ExpressionAttributeValues={
@@ -181,8 +176,7 @@ def remove_member_from_session(event, context):
     try:
         session_id = _extract_path_param(event, "session_id")
         body = _extract_body(event)
-        table = _get_table('sessions')
-        session = _get_session(session_id, table)
+        session = _get_session(session_id, sessions_table)
 
         if "user_id" not in body:
             raise ApiError("Invalid body")
@@ -195,12 +189,10 @@ def remove_member_from_session(event, context):
         except ValueError:
             raise ApiError("User not found", 404)
 
-        table.update_item(
+        sessions_table.update_item(
             Key={'session_id': session_id},
             UpdateExpression=f'REMOVE members[{index}]'
         )
-
-        users_table = _get_table('users')
 
         users_table.update_item(
             Key={'user_id': body['user_id']},
@@ -224,13 +216,11 @@ def add_song_to_session_queue(event, context):
         if "song" not in body:
             raise ApiError("Invalid body")
 
-        table = _get_table('sessions')
-        session = _get_session(session_id, table)
+        session = _get_session(session_id, sessions_table)
 
         if "host" not in session:
             raise ApiError("Invalid host", 500)
 
-        users_table = _get_table('users')
         host = _get_user(session['host'], users_table)
 
         if "access_token" not in host or host["access_token"] is None:
@@ -251,7 +241,7 @@ def add_song_to_session_queue(event, context):
 
         _add_song_to_queue(host['access_token'], body['song']['id'])
 
-        table.update_item(
+        sessions_table.update_item(
             Key={'session_id': session_id},
             UpdateExpression='SET queue = list_append(queue, :s)',
             ExpressionAttributeValues={
@@ -268,13 +258,11 @@ def add_song_to_session_queue(event, context):
 def update_now_playing(event, context):
     try:
         session_id = _extract_path_param(event, "session_id")
-        table = _get_table('sessions')
-        session = _get_session(session_id, table)
+        session = _get_session(session_id, sessions_table)
 
         if "updated_at" not in session or "currently_playing" not in session or "host" not in session:
             raise ApiError("Invalid session", 500)
 
-        users_table = _get_table('users')
         host = _get_user(session["host"], users_table)
 
         if int(host['expires_at']) <= time.time():
@@ -290,21 +278,26 @@ def update_now_playing(event, context):
                 }
             )
 
-        if int(session["updated_at"]) + 90 > time.time():
+        if session["updated_at"] is not None and int(session["updated_at"]) + 90 > time.time():
             return _success_response()
 
         currently_playing_song = _get_currently_playing(host["access_token"])
-
         currently_playing = [i for i, el in enumerate(session['queue']) if el['id'] == currently_playing_song['id']]
 
-        if len(currently_playing) == 0 or currently_playing[0] <= session["currently_playing"]:
+        if len(currently_playing) == 0:
             return _success_response()
 
-        table.update_item(
+        currently_playing = currently_playing[0]
+
+        if session["currently_playing"] is not None and currently_playing <= int(session["currently_playing"]):
+            return _success_response()
+
+        sessions_table.update_item(
             Key={'session_id': session_id},
-            UpdateExpression='SET currently_playing = :s',
+            UpdateExpression='SET currently_playing = :s, updated_at = :u',
             ExpressionAttributeValues={
-                ':s': str(currently_playing)
+                ':s': str(currently_playing),
+                ':u': str(int(time.time()))
             }
         )
 

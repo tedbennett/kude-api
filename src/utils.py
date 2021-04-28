@@ -1,4 +1,3 @@
-import boto3
 import json
 
 from error import ApiError
@@ -41,12 +40,6 @@ def _extract_query(event):
         raise ApiError("Invalid query")
 
 
-# Dynamo helper functions
-def _get_table(name):
-    dynamodb = boto3.resource("dynamodb")
-    return dynamodb.Table(f"kude-{name}")  # pylint: disable=no-member
-
-
 # User helper functions
 def _get_user(user_id, table):
     response = table.get_item(Key={"user_id": user_id})
@@ -75,9 +68,8 @@ def _parse_song(song):
 
 def _parse_songs(json):
     try:
-        print(json["name"])
         return list(map(
             lambda x: _parse_song(x),
-            json["data"]["tracks"]))
+            json["tracks"]['items']))
     except Exception:
         raise ApiError('Could not read Spotify response')
