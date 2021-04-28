@@ -3,8 +3,6 @@ import os
 import json
 from boto3.dynamodb.conditions import Attr
 
-from utils import _get_session
-
 api_gateway = boto3.client('apigatewaymanagementapi',
                            endpoint_url=os.environ.get('WEBSOCKET_URL'))
 connections_table = boto3.resource('dynamodb').Table('kude-connections')
@@ -20,8 +18,11 @@ def send_session_update(event, context):
     )
 
     connection_ids = list(map(lambda x: x["connection_id"], response["Items"]))
-    session = _get_session(session_id, sessions_table)
-
+    response = sessions_table.get_item(Key={"session_id": session_id})
+    if "Item" in response:
+        session = response["Item"]
+    else:
+        session = "session closed"
     for connection_id in connection_ids:
         api_gateway.post_to_connection(json.dumps(session), ConnectionId=connection_id)
 
