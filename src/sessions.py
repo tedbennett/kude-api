@@ -19,7 +19,7 @@ dynamodb = boto3.resource("dynamodb")
 users_table = dynamodb.Table("kude-users")
 sessions_table = dynamodb.Table("kude-sessions")
 
-lambda_client = boto3.resource("lambda")
+lambda_client = boto3.client("lambda")
 
 
 def _send_session_update(session_id):
