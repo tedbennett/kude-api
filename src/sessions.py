@@ -203,13 +203,13 @@ def remove_member_from_session(event, context):
 
         try:
             index = session["members"].index(body["user_id"])
-        except ValueError:
-            raise ApiError("User not found", 404)
 
-        sessions_table.update_item(
-            Key={'session_id': session_id},
-            UpdateExpression=f'REMOVE members[{index}]'
-        )
+            sessions_table.update_item(
+                Key={'session_id': session_id},
+                UpdateExpression=f'REMOVE members[{index}]'
+            )
+        except ValueError:
+            pass
 
         users_table.update_item(
             Key={'user_id': body['user_id']},
