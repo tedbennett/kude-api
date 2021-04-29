@@ -88,7 +88,7 @@ def create_session(event, context):
             Key={'user_id': body['user_id']},
             UpdateExpression='SET session_id = :s',
             ExpressionAttributeValues={
-                ':s': None
+                ':s': new_id
             }
         )
 
