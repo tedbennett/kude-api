@@ -2,6 +2,7 @@ import boto3
 import os
 import json
 from boto3.dynamodb.conditions import Attr
+from utils import _get_readable_session
 
 api_gateway = boto3.client('apigatewaymanagementapi',
                            endpoint_url=os.environ.get('WEBSOCKET_URL'))
@@ -24,6 +25,9 @@ def send_session_update(event, context):
     else:
         session = "session closed"
     for connection_id in connection_ids:
-        api_gateway.post_to_connection(json.dumps(session), ConnectionId=connection_id)
+        api_gateway.post_to_connection(
+            Data=json.dumps(_get_readable_session(session)),
+            ConnectionId=connection_id
+        )
 
     return {'statusCode': 200}

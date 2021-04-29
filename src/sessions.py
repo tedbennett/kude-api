@@ -11,7 +11,8 @@ from utils import (
     _get_user,
     _get_session,
     _success_response,
-    _process_api_error
+    _process_api_error,
+    _get_readable_session
 )
 from spotify import _add_song_to_queue, _get_currently_playing, _refresh_credentials
 
@@ -35,7 +36,7 @@ def get_session(event, context):
         session_id = _extract_path_param(event, "session_id")
         session = _get_session(session_id, sessions_table)
 
-        return _success_response(session)
+        return _success_response(_get_readable_session(session))
 
     except ApiError as e:
         return _process_api_error(e)

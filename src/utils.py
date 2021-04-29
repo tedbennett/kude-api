@@ -56,6 +56,10 @@ def _get_session(session_id, table):
     raise ApiError("Session not found", 404)
 
 
+def _get_readable_session(session):
+    return {**session, 'created_at': int(session['created_at']) * 1000}
+
+
 def _parse_song(song):
     return {
         "id": song["uri"],
