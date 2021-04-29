@@ -85,7 +85,7 @@ def _refresh_credentials(refresh_token):
     return (data['access_token'], data['expires_in'])
 
 
-def _get_user_profile(access_token):
+def _get_spotify_profile(access_token):
     http = urllib3.PoolManager()
     res = http.request(
         'GET',
@@ -95,7 +95,7 @@ def _get_user_profile(access_token):
     data = json.loads(res.data.decode('utf-8'))
 
     if 'product' not in data:
-        raise ApiError('Failed to find user profile', 404)
+        raise ApiError('Failed to find spotify profile', 404)
 
     return data['product'] == 'premium'
 
@@ -146,7 +146,7 @@ def authorise_spotify(event, context):
 
         expires_at = str(int(expires_in + time.time()))
 
-        if not _get_user_profile(access_token):
+        if not _get_spotify_profile(access_token):
             raise ApiError("Spotify account is not premium", 403)
 
         users_table.update_item(
