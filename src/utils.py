@@ -57,7 +57,11 @@ def _get_session(session_id, table):
 
 
 def _get_readable_session(session):
-    return {**session, 'created_at': int(session['created_at']) * 1000}
+    return {
+        **session,
+        'created_at': int(session['created_at']) * 1000,
+        'currently_playing': int(session['currently_playing']) if session['currently_playing'] is not None else None
+    }
 
 
 def _parse_song(song):
