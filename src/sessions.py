@@ -51,7 +51,7 @@ def get_session_by_key(event, context):
         if "Items" not in response or len(response["Items"]) == 0:
             raise ApiError("Session not found", 404)
 
-        return _success_response(response["Items"][0])
+        return _success_response(_get_readable_session(response["Items"][0]))
 
     except ApiError as e:
         return _process_api_error(e)
