@@ -58,9 +58,25 @@ def _get_session(session_id, table):
 
 def _get_readable_session(session):
     return {
-        **session,
+        'id': session['session_id'],
+        'name': session['session_name'],
+        'key': session['key'],
+        'updated_at': session['updated_at'],
+        'members': session['members'],
+        'queue': session['queue'],
+        'host': session['host'],
         'created_at': int(session['created_at']) * 1000,
         'currently_playing': int(session['currently_playing']) if session['currently_playing'] is not None else None
+    }
+
+
+def _get_readable_user(user):
+    return {
+        'id': user['user_id'],
+        'image_url': user['image_url'],
+        'name': user['user_name'],
+        'session': user['session_id'],
+        'host': user['host']
     }
 
 

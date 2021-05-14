@@ -9,11 +9,11 @@ def get_s3_signed_url(event, context):
         s3_client = boto3.client('s3')
         user_id = _extract_query(event)['user_id']
 
+        s3_name = os.environ.get('S3_BUCKET')
         signedRequest = s3_client.generate_presigned_url(
             'put_object',
-            Params={'Bucket': "kude", 'Key': "images/" + user_id, 'ContentType': 'jpeg'})
+            Params={'Bucket': s3_name, 'Key': "images/" + user_id, 'ContentType': 'jpeg'})
 
-        s3_name = os.environ.get('S3_BUCKET')
         return _success_response({
             'signedRequest': signedRequest,
             'url': f'https://{s3_name}.s3-eu-west-1.amazonaws.com/images/{user_id}'

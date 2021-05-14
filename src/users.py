@@ -7,7 +7,8 @@ from utils import (
     _extract_body,
     _get_user,
     _success_response,
-    _process_api_error
+    _process_api_error,
+    _get_readable_user
 )
 
 dynamodb = boto3.resource("dynamodb")
@@ -19,7 +20,7 @@ def get_user(event, context):
         user_id = _extract_path_param(event, "user_id")
         user = _get_user(user_id, users_table)
 
-        return _success_response(user)
+        return _success_response(_get_readable_user(user))
 
     except ApiError as e:
         return _process_api_error(e)
